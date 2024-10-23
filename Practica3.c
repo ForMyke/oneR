@@ -1,14 +1,12 @@
-
 #include <stdio.h>
 #include <stdint.h>
-
 #define MAX_TRAMAS 36
 #define LONGITUD_TRAMA 200
 
 unsigned char tramas[MAX_TRAMAS][LONGITUD_TRAMA];
 
+
 // Definición de las funciones
-void imprimir_trama(const uint8_t trama[], int longitud);
 void imprimir_mac_destino(const uint8_t trama[]);
 void imprimir_mac_origen(const uint8_t trama[]);
 void determinar_protocolo(const uint8_t trama[]);
@@ -18,12 +16,8 @@ int main() {
     unsigned int opcion;
 
     do {
-        printf("Que trama quieres imprimir? (1-%d): ", MAX_TRAMAS);
-        if (scanf("%u", &opcion) != 1) {
-            printf("Entrada invalida. Por favor, intenta nuevamente.\n");
-            while (getchar() != '\n');  // Limpiar buffer en caso de error de entrada
-            continue;
-        }
+        printf("Que trama quieres imprimir? (1-%d): \n", MAX_TRAMAS);
+        scanf("%u", &opcion);
 
         if (opcion < 1 || opcion > MAX_TRAMAS) {
             printf("Por favor elige un numero entre 1 y %d.\n", MAX_TRAMAS);
@@ -31,10 +25,10 @@ int main() {
     } while (opcion < 1 || opcion > MAX_TRAMAS);
 
     // Imprimir la trama seleccionada y sus características
-    imprimir_trama(tramas[opcion - 1], LONGITUD_TRAMA);
+        determinar_protocolo(tramas[opcion - 1]);
+
     imprimir_mac_destino(tramas[opcion - 1]);
     imprimir_mac_origen(tramas[opcion - 1]);
-    determinar_protocolo(tramas[opcion - 1]);
 
     // Analizar cabecera LLC
     analizar_llc(tramas[opcion - 1]);
@@ -42,20 +36,7 @@ int main() {
     return 0;
 }
 
-// Función para imprimir la trama completa con formato 0xXX
-void imprimir_trama(const uint8_t trama[], int longitud) {
-    printf("\nLa trama Ethernet es: \n");
-    for (unsigned int i = 0; i < longitud; i++) {
-        printf("%02x", trama[i]);
-        if (i < longitud - 1) {
-            printf(":");
-        }
-        if ((i + 1) % 16 == 0) {
-            printf("\n");
-        }
-    }
-    printf("\n");
-}
+
 
 // Función para imprimir la dirección MAC de destino (primeros 6 bytes)
 void imprimir_mac_destino(const uint8_t trama[]) {
@@ -81,65 +62,89 @@ void imprimir_mac_origen(const uint8_t trama[]) {
     printf("\n");
 }
 
-// Función para determinar el protocolo
 void determinar_protocolo(const uint8_t trama[]) {
-    uint16_t protocolo = (trama[12] << 8) | trama[13];
+    uint16_t protocolo;
+
+    protocolo = (trama[12] << 8) | trama[13];
+
 
     if (protocolo <= 1500) {
-        printf("Protocolo LLC\n");
+        printf("//////Cabecera Ethernet//////\n");
+		        printf("Tipo: LLC\n");
+
     } else if (protocolo == 2048) {
-        printf("Protocolo IP\n");
+        printf("//////Cabecera Ethernet//////\n");
+		printf("Tipo: IP\n");
+
     } else if (protocolo == 2054) {
-        printf("Protocolo ARP\n");
+        printf("//////Cabecera Ethernet////// \n");
+		printf("Tipo: ARP\n");
+
     } else {
-        printf("Protocolo desconocido: 0x%04x\n", protocolo);
-    }
+ printf("//////Cabecera Ethernet////// \n");
+		printf("--------Protocolo Desconocido--------\n");    }
 }
 
 // Función para analizar la cabecera LLC
 void analizar_llc(const uint8_t trama[]) {
     uint16_t protocolo = (trama[12] << 8) | trama[13];
-
-    if (protocolo > 1500) {
-        return;  // No es una trama LLC
+    if (protocolo == 0x0800 || protocolo == 0x0806  || protocolo > 1500) {
+        return;
     }
 
-    char ss[][5] = {"RR", "RNR", "REJ", "SREJ"};
-    char uc[][15] = {"UI", "SIM", "SARM", "UP", "SABM", "DISC", "SARME", "-", "SABME", "SNRM", "-", "RSET", "XID", "SNRME"};
-    char ur[][15] = {"UI", "RIM", "DM", "-", "-", "RD", "-", "UA", "-", "-", "FRMR", "-", "XID", "-"};
+  	unsigned char ss[][5] = {"RR","RNR","REJ","SREJ"};
+	unsigned char uc[][6] = {"UI","SIM"," ","SARM","UP"," "," ","SABM","DISC"," "," ","SARME"," "," "," ","SABME","SNRM"," "," ","RSET"," "," "," ","XID"," "," "," ","SNRME"};
+	unsigned char ur[][5] =  {"UI","RIM"," ","DM"," "," "," "," ","RD"," "," "," ","UA",""," "," "," ","FRMR "," "," "," "," "," ","XID"," "," "," "," "};
 
     uint8_t sap_destino = trama[14];
     uint8_t sap_origen = trama[15];
     uint8_t control = trama[16];
 
-    unsigned int size = (trama[12] << 8) | trama[13];
-    printf("Es de %d bytes\n", size);
+    uint8_t pf_bit = (control & 0x10) >> 4;  
+    printf("Size 0x%02x%02x\n", trama[12], trama[13]);
+    //Corrimiento para poder generaar el Size 
+unsigned int  size = (trama[12] << 8) | trama[13];
+printf("EL tamanio es de  %d bytes\n", size);
 
-    printf("\nCabecera LLC:\n");
-
+    
     uint8_t tipo_trama = control & 0x03;
 
     printf("SAP Destino: 0x%02x\n", sap_destino);
     printf("SAP Origen: 0x%02x\n", sap_origen);
 
     switch (tipo_trama) {
-        case 1:  // Trama de supervisión
-            printf("Supervisión: %s\n", ss[(control >> 2) & 0x03]);
-            break;
-        case 3:  // Trama no numerada
-            if (control & 0x10) {  // Trama respuesta
-                unsigned char M = ((control >> 2) & 0x03) | ((control >> 3) & 0x1C);
+        case 0: 
+        case 2:
+        printf("T-I   ");
+					printf("N(s) = %d   N(r)= %d  ",trama[16]>>1,trama[17]>>1);
+					if(trama[17] & 1){
+						if(trama[15] & 1){printf("  1/f");}
+						else{printf("  1/-p");}
+					}
+					break;
+        case 1:  
+           printf("T-S   ");
+					printf("%s   N(r) = %d  ",ss[(trama[16]>>2)&3],trama[17]>>1);
+					if(trama[17] & 1){
+						if(trama[15] & 1){printf("  1/-f");}
+						else{printf("  1/-p");}
+					}
+					break;
 
-                if (sap_origen & 1) {
-                    printf("Control (Respuesta): %s\n", ur[M]);
-                } else {
-                    printf("Control (Comando): %s\n", uc[M]);
-                }
-            }
-            break;
-        default:  // Trama de información
-            printf("Información: N(s) = %d, N(r) = %d\n", (control >> 1) & 0x7F, (trama[17] >> 1) & 0x7F);
-            break;
+        
+       
+
+        case 3:  
+            printf("T-U    ");
+				if(trama[16]&16){
+					if(trama[15]&1)
+						printf("%s, 1/-f", ur[((trama[16]>>2)&3) | ((trama[16]>>3)&28)] );
+					else
+					{
+						printf("%s,1/-p", uc[((trama[16]>>2)&3) | ((trama[16]>>3)&28)] );
+					}
+				}
+				break;
     }
 }
 
