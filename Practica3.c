@@ -13,6 +13,8 @@ void determinar_protocolo(const uint8_t trama[]);
 void analizar_llc(const uint8_t trama[]);
 
 int main() {
+
+	for (unsigned int i=1; i< MAX_TRAMAS;i++){}
     unsigned int opcion;
 
     do {
