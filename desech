@@ -1,0 +1,15 @@
+
+// Función para imprimir la trama completa con formato 0xXX
+void imprimir_trama(const uint8_t trama[], int longitud) {
+    printf("\nLa trama Ethernet es: \n");
+    for (unsigned int i = 0; i < 64; i++) {
+        printf("%02x", trama[i]);
+        if (i < longitud - 1) {
+            printf(":");
+        }
+        if ((i + 1) % 16 == 0) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
